@@ -1,66 +1,66 @@
-"use client"
+"use client";
 
-import * as React from "react"
-import { useState } from "react"
-import { db } from "@/lib/firebase"; 
+import * as React from "react";
+import { useState } from "react";
+import { usePathname } from "next/navigation";
+import { db } from "@/lib/firebase";
 import { collection, addDoc, serverTimestamp } from "firebase/firestore";
-import { ImagePlus, UploadCloud, PlusCircle, X, Loader2, AlignLeft } from "lucide-react" // Added AlignLeft
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Checkbox } from "@/components/ui/checkbox"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { ImagePlus, UploadCloud, PlusCircle, X, Loader2, AlignLeft } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { AppSidebar } from "@/components/sidebar/app-sidebar";
+import { 
+  Breadcrumb,
+  BreadcrumbItem,
+  BreadcrumbList,
+  BreadcrumbPage 
+} from "@/components/ui/breadcrumb";
+import { SidebarProvider, SidebarInset, SidebarTrigger } from "@/components/ui/sidebar";
 
 export default function AddNewProductPage() {
-  const CLOUDINARY_UPLOAD_PRESET = "taskflow_preset"; 
-  const CLOUDINARY_CLOUD_NAME = "dvmpn8mjh";
+  const pathname = usePathname();
+  const pageTitle = pathname?.split("/").pop()?.replace(/-/g, " ") || "Add New Product";
 
+  // --- PRODUCT STATES ---
   const [isPublishing, setIsPublishing] = useState(false);
   const [productName, setProductName] = useState("");
   const [sku, setSku] = useState("");
   const [regPrice, setRegPrice] = useState("");
   const [salePrice, setSalePrice] = useState("");
-
-  // --- UPDATED: PRE-FILLED TEMPLATE ---
   const [descBlocks, setDescBlocks] = useState([
-    { 
-      id: 1, 
-      type: "text", 
-      label: "Technical Specifications", 
-      value: "WATTS: \nVOLTAGE: \nLUMENS: \nCOLOR TEMP: \nBEAM ANGLE: \nMATERIAL: " 
-    }
+    { id: 1, type: "text", label: "Technical Specifications", value: "WATTS: \nVOLTAGE: \nLUMENS: \nCOLOR TEMP: \nBEAM ANGLE: \nMATERIAL: " }
   ]);
-  
   const [mainImage, setMainImage] = useState<File | null>(null);
   const [galleryImage, setGalleryImage] = useState<File | null>(null);
   const [selectedCats, setSelectedCats] = useState<string[]>([]);
   const [selectedBrands, setSelectedBrands] = useState<string[]>([]);
+  const [selectedWebsites, setSelectedWebsites] = useState<string[]>([]);
+
 
   const categories = ["Uncategorized", "JISO - Bollard Light", "LIT - LED Batten", "LUXIONA - Wall Light"];
   const brands = ["Buildchem", "JISO", "LIT", "ZUMTOBEL", "LUXIONA"];
 
-  const handleCheckbox = (val: string, type: 'cat' | 'brand') => {
-    const setter = type === 'cat' ? setSelectedCats : setSelectedBrands;
-    const current = type === 'cat' ? selectedCats : selectedBrands;
+  const handleCheckbox = (val: string, type: "cat" | "brand") => {
+    const setter = type === "cat" ? setSelectedCats : setSelectedBrands;
+    const current = type === "cat" ? selectedCats : selectedBrands;
     setter(current.includes(val) ? current.filter(i => i !== val) : [...current, val]);
   };
+
+  const CLOUDINARY_UPLOAD_PRESET = "taskflow_preset"; 
+  const CLOUDINARY_CLOUD_NAME = "dvmpn8mjh";
 
   const uploadToCloudinary = async (file: File) => {
     const formData = new FormData();
     formData.append("file", file);
     formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET);
-    try {
-      const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
-        method: "POST",
-        body: formData,
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error?.message || "Cloudinary upload failed");
-      return data.secure_url;
-    } catch (err) {
-      throw err;
-    }
+    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, { method: "POST", body: formData });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error?.message || "Cloudinary upload failed");
+    return data.secure_url;
   };
 
   const handlePublish = async () => {
@@ -69,25 +69,24 @@ export default function AddNewProductPage() {
     try {
       const mainUrl = await uploadToCloudinary(mainImage);
       let galleryUrl = "";
-      if (galleryImage) {
-        galleryUrl = await uploadToCloudinary(galleryImage);
-      }
+      if (galleryImage) galleryUrl = await uploadToCloudinary(galleryImage);
 
       await addDoc(collection(db, "products"), {
         name: productName,
-        sku: sku,
+        sku,
         regularPrice: Number(regPrice) || 0,
         salePrice: Number(salePrice) || 0,
-        descriptionBlocks: descBlocks, // Isasave nito yung listahan ng specs
+        descriptionBlocks: descBlocks,
         mainImage: mainUrl,
         galleryImage: galleryUrl,
         categories: selectedCats,
         brands: selectedBrands,
+        websites: selectedWebsites,
         createdAt: serverTimestamp(),
       });
 
       alert("Product Published Successfully!");
-      window.location.reload(); 
+      window.location.reload();
     } catch (error: any) {
       alert("Error: " + error.message);
     } finally {
@@ -96,7 +95,24 @@ export default function AddNewProductPage() {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 bg-slate-50 min-h-screen">
+    <SidebarProvider>
+      <AppSidebar variant="inset" onNavigate={(view) => console.log("Navigated to", view)} />
+
+      <SidebarInset>
+        <header className="flex h-16 items-center gap-2 border-b px-4">
+          <SidebarTrigger className="-ml-1" />
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem>
+                <BreadcrumbPage className="capitalize font-black italic tracking-tighter text-[#d11a2a]">
+                  {pageTitle}
+                </BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </header>
+
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6 p-4 bg-slate-50 min-h-screen">
       <div className="md:col-span-2 space-y-6">
         <Card className="shadow-sm border-none ring-1 ring-slate-200">
           <CardHeader><CardTitle className="flex items-center gap-2"><AlignLeft className="w-5 h-5 text-blue-500"/> Product Information</CardTitle></CardHeader>
@@ -105,6 +121,39 @@ export default function AddNewProductPage() {
               <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">Product Name</Label>
               <Input className="h-12 text-lg font-bold" value={productName} onChange={(e) => setProductName(e.target.value)} placeholder="e.g. ZUMTOBEL PENDANT LUMINAIRE" />
             </div>
+            
+            <Card className="border-none ring-1 ring-slate-200 shadow-sm">
+  <CardHeader className="bg-slate-50/50 border-b border-slate-100">
+    <CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center">
+      Select Which Website to Upload To
+    </CardTitle>
+  </CardHeader>
+  <CardContent>
+    <div className="flex gap-4 justify-center flex-wrap">
+      {["Disruptive", "Ecoshift", "VAH"].map((site) => (
+        <Label
+          key={site}
+          className="hover:bg-accent/50 flex items-center gap-3 rounded-lg border p-3 cursor-pointer
+                     has-[[aria-checked=true]]:border-blue-600 has-[[aria-checked=true]]:bg-blue-50
+                     dark:has-[[aria-checked=true]]:border-blue-900 dark:has-[[aria-checked=true]]:bg-blue-950"
+        >
+          <Checkbox
+            id={`website-${site}`}
+            defaultChecked={selectedWebsites.includes(site)}
+            className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600
+                       data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700
+                       dark:data-[state=checked]:bg-blue-700"
+            onCheckedChange={(checked) => {
+              if (checked) setSelectedWebsites((prev) => [...prev, site]);
+              else setSelectedWebsites((prev) => prev.filter((b) => b !== site));
+            }}
+          />
+          <span className="text-sm font-medium">{site}</span>
+        </Label>
+      ))}
+    </div>
+  </CardContent>
+</Card>
 
             {/* --- DYNAMIC DESCRIPTION AREA --- */}
             <div className="space-y-4">
@@ -232,5 +281,7 @@ export default function AddNewProductPage() {
         </Button>
       </div>
     </div>
-  )
+      </SidebarInset>
+    </SidebarProvider>
+  );
 }

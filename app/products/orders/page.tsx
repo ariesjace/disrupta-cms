@@ -3,7 +3,7 @@
 import { useEffect, useState, Suspense } from "react"
 import { db } from "@/lib/firebase"
 import { collection, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from "firebase/firestore"
-import { Mail, Phone, MapPin, Package, Clock, User, Trash2, CheckCircle, Search } from "lucide-react"
+import { Mail, Phone, MapPin, Package, Clock, User, Trash2, CheckCircle, Search, Globe } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { PageWrapper } from "@/components/sidebar/page-wrapper"
 
@@ -175,6 +175,18 @@ function OrdersContent() {
                       </div>
                     </div>
                   )}
+
+                  {/* WEBSITE VALUE DISPLAY */}
+                  <div className="space-y-3 pt-4 border-t border-gray-100">
+                    <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] flex items-center gap-2">
+                      <Globe size={14} className="text-[#d11a2a]" /> Origin Website
+                    </h4>
+                    <div className="ml-6">
+                      <span className="bg-gray-900 text-white text-[10px] font-black uppercase px-4 py-2 rounded-lg tracking-widest shadow-lg shadow-gray-200">
+                        {inquiry.website || "disruptivesolutionsinc"}
+                      </span>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Right: Items List */}

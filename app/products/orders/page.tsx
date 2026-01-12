@@ -3,14 +3,23 @@
 import { useEffect, useState, Suspense } from "react"
 import { db } from "@/lib/firebase"
 import { collection, query, orderBy, onSnapshot, updateDoc, doc, deleteDoc } from "firebase/firestore"
-import { Mail, Phone, MapPin, Package, Clock, User, Trash2, CheckCircle, Search, Globe } from "lucide-react"
+import { Mail, Phone, MapPin, Package, Clock, User, Trash2, CheckCircle, Search, Globe, Filter } from "lucide-react"
 import { motion, AnimatePresence } from "framer-motion"
 import { PageWrapper } from "@/components/sidebar/page-wrapper"
+
+// Define natin ang brands para sa filter
+const BRANDS = [
+  { id: "all", label: "All Inquiries" },
+  { id: "disruptivesolutionsinc", label: "Disruptive" },
+  { id: "ecoshift", label: "Ecoshift" },
+  { id: "vah", label: "VAH" }
+]
 
 function OrdersContent() {
   const [inquiries, setInquiries] = useState<any[]>([])
   const [loading, setLoading] = useState(true)
   const [searchTerm, setSearchTerm] = useState("")
+  const [activeFilter, setActiveFilter] = useState("all") // Default filter
 
   useEffect(() => {
     const q = query(collection(db, "inquiries"), orderBy("createdAt", "desc"))
@@ -40,13 +49,18 @@ function OrdersContent() {
     }
   }
 
-  const filteredInquiries = inquiries.filter(
-    (inq) =>
+  // LOGIC PARA SA FILTERING (Search + Website Brand)
+  const filteredInquiries = inquiries.filter((inq) => {
+    const matchesSearch = 
       `${inq.customerDetails.firstName} ${inq.customerDetails.lastName}`
         .toLowerCase()
         .includes(searchTerm.toLowerCase()) ||
-      inq.customerDetails.email?.toLowerCase().includes(searchTerm.toLowerCase()),
-  )
+      inq.customerDetails.email?.toLowerCase().includes(searchTerm.toLowerCase());
+
+    const matchesBrand = activeFilter === "all" || inq.website === activeFilter;
+
+    return matchesSearch && matchesBrand;
+  })
 
   if (loading)
     return (
@@ -79,6 +93,23 @@ function OrdersContent() {
             className="pl-12 pr-6 py-4 bg-white border border-gray-100 rounded-2xl w-full md:w-80 shadow-sm focus:ring-2 focus:ring-[#d11a2a]/10 outline-none font-medium text-sm transition-all"
           />
         </div>
+      </div>
+
+      {/* BRAND FILTER TABS */}
+      <div className="flex flex-wrap gap-2 border-b border-gray-100 pb-4">
+        {BRANDS.map((brand) => (
+          <button
+            key={brand.id}
+            onClick={() => setActiveFilter(brand.id)}
+            className={`px-6 py-2 rounded-full text-[10px] font-black uppercase tracking-widest transition-all ${
+              activeFilter === brand.id
+                ? "bg-black text-white shadow-lg"
+                : "bg-gray-50 text-gray-400 hover:bg-gray-100"
+            }`}
+          >
+            {brand.label}
+          </button>
+        ))}
       </div>
 
       {/* Inquiries List */}
@@ -149,7 +180,7 @@ function OrdersContent() {
 
               {/* Card Content Section */}
               <div className="p-6 md:p-8 grid md:grid-cols-2 gap-8 bg-gray-50/30">
-                {/* Left: Delivery Info */}
+                {/* Left Section */}
                 <div className="space-y-6">
                   <div className="space-y-3">
                     <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] flex items-center gap-2">
@@ -165,31 +196,20 @@ function OrdersContent() {
                     </p>
                   </div>
 
-                  {inquiry.customerDetails.orderNotes && (
-                    <div className="space-y-2">
-                      <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] pl-6">
-                        Customer Notes
-                      </h4>
-                      <div className="ml-6 p-4 bg-white border border-gray-100 rounded-2xl italic text-xs text-gray-600 shadow-sm">
-                        "{inquiry.customerDetails.orderNotes}"
-                      </div>
-                    </div>
-                  )}
-
-                  {/* WEBSITE VALUE DISPLAY */}
+                  {/* ORIGIN WEBSITE TAG */}
                   <div className="space-y-3 pt-4 border-t border-gray-100">
                     <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] flex items-center gap-2">
                       <Globe size={14} className="text-[#d11a2a]" /> Origin Website
                     </h4>
                     <div className="ml-6">
-                      <span className="bg-gray-900 text-white text-[10px] font-black uppercase px-4 py-2 rounded-lg tracking-widest shadow-lg shadow-gray-200">
+                      <span className="bg-black text-white text-[9px] font-black uppercase px-3 py-1.5 rounded-md tracking-widest shadow-sm">
                         {inquiry.website || "disruptivesolutionsinc"}
                       </span>
                     </div>
                   </div>
                 </div>
 
-                {/* Right: Items List */}
+                {/* Right Section: Items List */}
                 <div className="space-y-4">
                   <h4 className="text-[10px] font-black uppercase text-gray-400 tracking-[0.2em] flex items-center gap-2">
                     <Package size={14} className="text-[#d11a2a]" /> Requested Items ({inquiry.items?.length || 0})
@@ -227,7 +247,7 @@ function OrdersContent() {
 
         {filteredInquiries.length === 0 && (
           <div className="text-center py-20 bg-white rounded-[2.5rem] border border-dashed border-gray-200">
-            <p className="text-xs font-black text-gray-300 uppercase tracking-[0.3em]">No product inquiries found</p>
+            <p className="text-xs font-black text-gray-300 uppercase tracking-[0.3em]">No inquiries for this category</p>
           </div>
         )}
       </div>

@@ -172,7 +172,7 @@ function AllProductsContent() {
                 <TableHead className="text-[10px] font-black uppercase tracking-widest">Product Details</TableHead>
                 <TableHead className="text-[10px] font-black uppercase tracking-widest">SKU</TableHead>
                 <TableHead className="text-[10px] font-black uppercase tracking-widest">Brands</TableHead>
-                <TableHead className="text-[10px] font-black uppercase tracking-widest">Websites</TableHead>
+                <TableHead className="text-[10px] font-black uppercase tracking-widest">Website</TableHead>
                 <TableHead className="text-right px-6 text-[10px] font-black uppercase tracking-widest">
                   Actions
                 </TableHead>
@@ -222,7 +222,7 @@ function AllProductsContent() {
                     </TableCell>
                     <TableCell>
                       <span className="text-[9px] font-black bg-gray-100 px-2 py-1 rounded text-gray-500 uppercase">
-                        {product.websites || "—"}
+                        {product.website || "—"}
                       </span>
                     </TableCell>
 

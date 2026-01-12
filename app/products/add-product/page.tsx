@@ -3,7 +3,7 @@ import { useState } from "react"
 import { usePathname } from "next/navigation"
 import { db } from "@/lib/firebase"
 import { collection, addDoc, serverTimestamp } from "firebase/firestore"
-import { ImagePlus, UploadCloud, PlusCircle, X, Loader2, AlignLeft } from "lucide-react"
+import { ImagePlus, UploadCloud, PlusCircle, X, Loader2, AlignLeft, Globe } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
@@ -12,6 +12,43 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage } from "@/components/ui/breadcrumb"
 import { PageWrapper } from "@/components/sidebar/page-wrapper"
+
+const WEBSITE_CLASSIFICATION = {
+  Ecoshift: {
+    brands: ["Ecoshift"],
+    categories: [
+      "weatherproof fixture",
+      "wall lamp",
+      "uv disinfection light",
+      "tube light",
+      "track light",
+      "swimming pool light",
+      "strip light",
+      "streetlight",
+      "spotlight",
+      "solar street light",
+    ],
+  },
+  Disruptive: {
+    brands: ["Buildchem", "JISO", "LIT", "ZUMTOBEL", "LUXIONA"],
+    categories: ["Uncategorized", "JISO - Bollard Light", "LIT - LED Batten", "LUXIONA - Wall Light"],
+  },
+  VAH: {
+    brands: ["buildchem", "oko", "progressive dynamics inc.", "progressive materials solutions inc."],
+    categories: [
+      "Superplasticizers & High-Range Water Reducers",
+      "Set Retarders & Accelerators",
+      "Underwater Concrete Solutions",
+      "Waterproofing Solutions",
+      "Soil Stabilization & Road Foundation",
+      "Mould Release Agents",
+      "Corrosion Protection Solutions",
+      "Curing Compounds",
+      "Cement Processing & Grinding Aids",
+      "Cleaning & Surface Preparation Chemicals",
+    ],
+  },
+}
 
 function AddNewProductPageContent() {
   const pathname = usePathname()
@@ -35,10 +72,20 @@ function AddNewProductPageContent() {
   const [galleryImage, setGalleryImage] = useState<File | null>(null)
   const [selectedCats, setSelectedCats] = useState<string[]>([])
   const [selectedBrands, setSelectedBrands] = useState<string[]>([])
-  const [selectedWebsites, setSelectedWebsites] = useState<string[]>([])
 
-  const categories = ["Uncategorized", "JISO - Bollard Light", "LIT - LED Batten", "LUXIONA - Wall Light"]
-  const brands = ["Buildchem", "JISO", "LIT", "ZUMTOBEL", "LUXIONA"]
+  const [selectedWebsite, setSelectedWebsite] = useState("Ecoshift")
+
+  const currentClassification = WEBSITE_CLASSIFICATION[selectedWebsite as keyof typeof WEBSITE_CLASSIFICATION]
+  const categories = currentClassification?.categories || []
+  const brands = currentClassification?.brands || []
+
+  const handleWebsiteChange = (website: string) => {
+    setSelectedWebsite(website)
+    const newBrands = WEBSITE_CLASSIFICATION[website as keyof typeof WEBSITE_CLASSIFICATION]?.brands || []
+    const newCategories = WEBSITE_CLASSIFICATION[website as keyof typeof WEBSITE_CLASSIFICATION]?.categories || []
+    setSelectedBrands([newBrands[0]])
+    setSelectedCats([])
+  }
 
   const handleCheckbox = (val: string, type: "cat" | "brand") => {
     const setter = type === "cat" ? setSelectedCats : setSelectedBrands
@@ -50,17 +97,28 @@ function AddNewProductPageContent() {
   const CLOUDINARY_CLOUD_NAME = "dvmpn8mjh"
 
   const uploadToCloudinary = async (file: File) => {
-    const formData = new FormData()
-    formData.append("file", file)
-    formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET)
-    const res = await fetch(`https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`, {
+  const formData = new FormData()
+  formData.append("file", file)
+  formData.append("upload_preset", CLOUDINARY_UPLOAD_PRESET)
+
+  const res = await fetch(
+    `https://api.cloudinary.com/v1_1/${CLOUDINARY_CLOUD_NAME}/image/upload`,
+    {
       method: "POST",
       body: formData,
-    })
-    const data = await res.json()
-    if (!res.ok) throw new Error(data.error?.message || "Cloudinary upload failed")
-    return data.secure_url
+    }
+  )
+
+  const data = await res.json()
+  console.log("Cloudinary response:", data)
+
+  if (!res.ok) {
+    throw new Error(data?.error?.message || "Cloudinary upload failed")
   }
+
+  return data.secure_url
+}
+
 
   const handlePublish = async () => {
     if (!productName || !mainImage) return alert("Paki-lagay ang Product Name at Main Image.")
@@ -80,7 +138,7 @@ function AddNewProductPageContent() {
         galleryImage: galleryUrl,
         categories: selectedCats,
         brands: selectedBrands,
-        websites: selectedWebsites,
+        website: selectedWebsite,
         createdAt: serverTimestamp(),
       })
 
@@ -126,38 +184,20 @@ function AddNewProductPageContent() {
                 />
               </div>
 
-              <Card className="border-none ring-1 ring-slate-200 shadow-sm">
-                <CardHeader className="bg-slate-50/50 border-b border-slate-100">
-                  <CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest text-center">
-                    Select Which Website to Upload To
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <div className="flex gap-4 justify-center flex-wrap">
-                    {["Disruptive", "Ecoshift", "VAH"].map((site) => (
-                      <Label
-                        key={site}
-                        className="hover:bg-accent/50 flex items-center gap-3 rounded-lg border p-3 cursor-pointer
-                     has-[[aria-checked=true]]:border-blue-600 has-[[aria-checked=true]]:bg-blue-50
-                     dark:has-[[aria-checked=true]]:border-blue-900 dark:has-[[aria-checked=true]]:bg-blue-950"
-                      >
-                        <Checkbox
-                          id={`website-${site}`}
-                          defaultChecked={selectedWebsites.includes(site)}
-                          className="data-[state=checked]:border-blue-600 data-[state=checked]:bg-blue-600
-                       data-[state=checked]:text-white dark:data-[state=checked]:border-blue-700
-                       dark:data-[state=checked]:bg-blue-700"
-                          onCheckedChange={(checked) => {
-                            if (checked) setSelectedWebsites((prev) => [...prev, site])
-                            else setSelectedWebsites((prev) => prev.filter((b) => b !== site))
-                          }}
-                        />
-                        <span className="text-sm font-medium">{site}</span>
-                      </Label>
-                    ))}
-                  </div>
-                </CardContent>
-              </Card>
+              <div className="space-y-3">
+                <label className="text-[10px] font-black uppercase text-gray-400 flex items-center gap-2">
+                  <Globe size={12} className="text-[#d11a2a]" /> Select Website
+                </label>
+                <select
+                  value={selectedWebsite}
+                  onChange={(e) => handleWebsiteChange(e.target.value)}
+                  className="w-full font-black text-xs uppercase outline-none bg-gray-50 p-4 rounded-2xl border-none cursor-pointer focus:ring-2 focus:ring-[#d11a2a]/10"
+                >
+                  <option value="Ecoshift">Ecoshift</option>
+                  <option value="Disruptive">Disruptive</option>
+                  <option value="VAH">VAH</option>
+                </select>
+              </div>
 
               {/* --- DYNAMIC DESCRIPTION AREA --- */}
               <div className="space-y-4">
@@ -317,11 +357,10 @@ function AddNewProductPageContent() {
             </CardContent>
           </Card>
 
-          {/* --- CATEGORIES & BRANDS (Styled as Sidebar) --- */}
           <Card className="border-none ring-1 ring-slate-200 shadow-sm">
             <CardHeader className="bg-slate-50/50 border-b border-slate-100">
               <CardTitle className="text-[10px] font-black uppercase text-slate-500 tracking-widest">
-                Classification
+                Classification ({selectedWebsite})
               </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6 pt-6">
@@ -332,6 +371,7 @@ function AddNewProductPageContent() {
                     <div key={cat} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50">
                       <Checkbox
                         id={cat}
+                        checked={selectedCats.includes(cat)}
                         onCheckedChange={() => handleCheckbox(cat, "cat")}
                         className="border-slate-300"
                       />
@@ -350,6 +390,7 @@ function AddNewProductPageContent() {
                     <div key={brand} className="flex items-center space-x-3 p-2 rounded-lg hover:bg-slate-50">
                       <Checkbox
                         id={brand}
+                        checked={selectedBrands.includes(brand)}
                         onCheckedChange={() => handleCheckbox(brand, "brand")}
                         className="border-slate-300"
                       />
